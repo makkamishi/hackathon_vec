@@ -15,8 +15,8 @@ db_config = {
 
 @app.route('/insert_data', methods=['POST'])
 def insert_data():
-    Percentage = request.form.get('Percentage')
-    if Percentage is None:
+    distance = request.form.get('distance')
+    if distance is None:
         return "Distance value is missing", 400
 
     try:
@@ -25,9 +25,9 @@ def insert_data():
         if conn.is_connected():
             cursor = conn.cursor()
             # Insert the distance value into the sensor_data table
-            cursor.execute("INSERT INTO Sensor_data (Percentage) VALUES (%s)", (Percentage,))
+            cursor.execute("INSERT INTO Sensor_data (Percentage) VALUES (%s)", (distance,))
             conn.commit()
-            return "New record create successfully", 201
+            return "New record created successfully", 201
     except Error as e:
         return f"Error: {e}", 500
     finally:
@@ -36,4 +36,4 @@ def insert_data():
             conn.close()
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=5000)
