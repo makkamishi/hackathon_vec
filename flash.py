@@ -16,26 +16,22 @@ db_config = {
 @app.route('/insert_data', methods=['POST'])
 def insert_data():
     distance = request.form.get('distance')
-    id = request.form.get('id')  
+    id = request.form.get('id')
 
-    if distance is None:
-        return "Distance value is missing", 400
+    if not distance or not id:
+       return "Distance or id value is missing", 400
 
     try:
-        conn = mysql.connector.connect(**db_config)
-        if conn.is_connected():
-            cursor = conn.cursor()
-            cursor.execute("Update Sensor_datas SET Percentage =%s Where id = %s", (distance,id,))
-            conn.commit()
-            return "New record created successfully", 201
-    except Error as e:
-        return f"Error: {e}", 500
-        
-    finally:
-        if conn.is_connected():
-            cursor.close()
-            conn.close()
-
+        with mysql.connector.connect(**db_config) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("UPDATE Sensor_datas SET Percentage = %s WHERE id = %s",(distance, id))
+                if cursor.rowcount == 0:
+                    return "No record found with the provided id.", 404
+                conn.commit()
+                return "Record updated successfully", 200
+    except mysql.connector.Error as e:
+        return f"Database error: {e}", 500
+    
 def get_sensor_data_as_json():
 
     conn = mysql.connector.connect(
@@ -48,14 +44,17 @@ def get_sensor_data_as_json():
 
     cursor = conn.cursor()
 
-    query = "SELECT Percentage FROM Sensor_datas"
+    query = "SELECT id, Percentage, latitude, longitude FROM Sensor_datas"
     cursor.execute(query)
     results = cursor.fetchall()
     data = {}
-    for i, row in enumerate(results, start=1):
-        key = f"bin{i}"
-        data[key] = row[0]
-
+    for row in results:
+        bin_id = row[0]  # 'id' from the database
+        data[f"bin{bin_id}"] = {
+            "id": bin_id,
+            "Level": row[1],  # 'Percentage' from the database
+            "Coordinates": [row[2], row[3]]  # 'latitude' and 'longitude' from the database
+        }
     json_data = json.dumps(data, indent=4)
     return json_data
 
